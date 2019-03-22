@@ -1,5 +1,7 @@
 import collections
 
+from functools import wraps
+
 from zope.interface import implementer
 
 from OpenSSL.SSL import Connection
@@ -93,8 +95,13 @@ class _ContextProxy(object):
         return self._obj.set_npn_select_callback(cb)
 
     def set_alpn_select_callback(self, cb):
-        self._factory._alpnSelectCallbackForContext(self._obj, cb)
-        return self._obj.set_alpn_select_callback(cb)
+
+        @wraps(cb)
+        def alpn_callback(connection, protocols):
+            return self._factory.selectAlpn(lambda: cb(connection, protocols), connection, protocols)
+
+        self._factory._alpnSelectCallbackForContext(self._obj, alpn_callback)
+        return self._obj.set_alpn_select_callback(alpn_callback)
 
     def set_alpn_protos(self, protocols):
         self._factory._alpnProtocolsForContext(self._obj, protocols)
@@ -115,8 +122,9 @@ class _ContextProxy(object):
 
 @implementer(IOpenSSLServerConnectionCreator)
 class SNIMap(object):
-    def __init__(self, mapping):
+    def __init__(self, mapping, acme_mapping=None):
         self.mapping = mapping
+        self.acme_mapping = acme_mapping
         self._negotiationDataForContext = collections.defaultdict(
             _NegotiationData
         )
@@ -128,9 +136,30 @@ class SNIMap(object):
             self.selectContext
         )
 
-    def selectContext(self, connection):
+    def selectAlpn(self, default, connection, protocols):
+        """
+        Trap alpn negotation, possibly intervene to choose a new certificate
+        or protocol. Needs to happen after servername.
+
+        Acme works by sending a special certificate based on this negotiation.
+        If such a certificate exists in self.acme_mapping, we will respond.
+
+        The acme protocol doesn't need to send or receive other data.
+        """
+        ACME_TLS_1 = b'acme-tls/1'
+        if not ACME_TLS_1 in protocols or not self.acme_mapping:
+            return default()
+        self.selectContext(connection, mapping=self.acme_mapping)
+        # does this mess up 'normal' connections to the same context?
+        # is this really a context from a separate directory?
+        connection.get_context().set_alpn_protos([ACME_TLS_1])
+        return ACME_TLS_1
+
+    def selectContext(self, connection, mapping=None):
+        mapping = mapping or self.mapping
+
         oldContext = connection.get_context()
-        newContext = self.mapping[connection.get_servername()].getContext()
+        newContext = mapping[connection.get_servername()].getContext()
 
         negotiationData = self._negotiationDataForContext[oldContext]
         negotiationData.negotiateNPN(newContext)
