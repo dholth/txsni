@@ -121,7 +121,7 @@ class SNIMap(object):
             _NegotiationData
         )
         try:
-            self.context = self.mapping['DEFAULT'].getContext()
+            self.context = self.mapping[b'DEFAULT'].getContext()
         except KeyError:
             self.context = CertificateOptions().getContext()
         self.context.set_tlsext_servername_callback(
@@ -173,9 +173,9 @@ class HostDirectoryMap(object):
 
     def __getitem__(self, hostname):
         if hostname is None:
-            hostname = "DEFAULT"
+            hostname = b"DEFAULT"
         filePath = self.directoryPath.child(hostname).siblingExtension(".pem")
         if filePath.isfile():
             return certificateOptionsFromPileOfPEM(filePath.getContent())
         else:
-            raise KeyError("no pem file for " + hostname)
+            raise KeyError("no pem file for " + hostname.decode('charmap'))
