@@ -7,9 +7,7 @@ from OpenSSL.SSL import Connection
 from twisted.internet.interfaces import IOpenSSLServerConnectionCreator
 from twisted.internet.ssl import CertificateOptions
 
-from txsni.only_noticed_pypi_pem_after_i_wrote_this import (
-    certificateOptionsFromPileOfPEM
-)
+import pem.twisted
 
 
 class _NegotiationData(object):
@@ -176,6 +174,6 @@ class HostDirectoryMap(object):
             hostname = "DEFAULT"
         filePath = self.directoryPath.child(hostname).siblingExtension(".pem")
         if filePath.isfile():
-            return certificateOptionsFromPileOfPEM(filePath.getContent())
+            return pem.twisted.certificateOptionsFromPEMs(filePath.getContent())
         else:
             raise KeyError("no pem file for " + hostname)

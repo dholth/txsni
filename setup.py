@@ -20,6 +20,7 @@ setup(
     install_requires=[
         "Twisted[tls]>=14.0",
         "pyOpenSSL>=0.14",
+        "pem"
     ],
     version="0.1.9",
     long_description=long_description,

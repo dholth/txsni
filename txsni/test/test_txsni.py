@@ -227,22 +227,6 @@ class TestCommunication(unittest.TestCase):
         return handshake_deferred
 
 
-class TestPemObjects(unittest.TestCase, object):
-    """
-    Tests for L{objectsFromPEM}
-    """
-
-    def test_noObjects(self):
-        """
-        The empty string returns an empty list of certificates.
-        """
-
-        objects = objectsFromPEM(b"")
-        self.assertEqual(objects.certificates, [])
-        self.assertEqual(objects.keys, [])
-
-
-
 def will_use_tls_1_3():
     """
     Will OpenSSL negotiate TLS 1.3?
