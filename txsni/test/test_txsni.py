@@ -4,7 +4,6 @@ from functools import partial
 
 from txsni.snimap import SNIMap, HostDirectoryMap
 from txsni.tlsendpoint import TLSEndpoint
-from txsni.only_noticed_pypi_pem_after_i_wrote_this import objectsFromPEM
 from txsni.parser import SNIDirectoryParser
 
 from OpenSSL.crypto import load_certificate, FILETYPE_PEM
