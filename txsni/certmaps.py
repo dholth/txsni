@@ -14,8 +14,8 @@ class PerHostnameDirectoryMap(object):
 
     def __init__(self, directoryPath, keyName='privkey.pem', fullchainName='fullchain.pem'):
         self.directoryPath = directoryPath
-        self.keyPath = keyName
-        self.chainPath = fullchainName
+        self.keyName = keyName
+        self.chainName = fullchainName
 
     def __getitem__(self, hostname):
         if hostname is None:

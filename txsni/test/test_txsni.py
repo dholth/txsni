@@ -6,6 +6,7 @@ from txsni.snimap import SNIMap, HostDirectoryMap
 from txsni.tlsendpoint import TLSEndpoint
 from txsni.only_noticed_pypi_pem_after_i_wrote_this import objectsFromPEM
 from txsni.parser import SNIDirectoryParser
+from txsni.certmaps import PerHostnameDirectoryMap, PerHostnameFilesMap
 
 from OpenSSL.crypto import load_certificate, FILETYPE_PEM
 from OpenSSL.SSL import Context, SSLv23_METHOD, Connection
@@ -376,3 +377,28 @@ class TestSNIDirectoryParser(unittest.TestCase):
         old_cert_handshake = handshake_and_check(None)
         old_cert_handshake.addCallback(reset_http2bin_cert)
         return old_cert_handshake.addCallback(handshake_and_check)
+
+
+class TestCertMaps(unittest.TestCase):
+    """
+    Test alternate certificate maps.
+    """
+
+    def excercise_map(self, cert_map):
+        cert_map[b'DEFAULT']
+        cert_map[b'http2bin.org']
+        try:
+            cert_map[b'notfound']
+        except KeyError:
+            pass
+        else:
+            raise Exception("expected KeyError")
+
+    def test_maps(self):
+        maps = [
+            PerHostnameDirectoryMap(FilePath(CERT_DIR).child('certs')),
+            PerHostnameFilesMap(FilePath(CERT_DIR).child('alpn-certs')),
+            HostDirectoryMap(FilePath(CERT_DIR)),
+        ]
+        for m in maps:
+            self.excercise_map(m)

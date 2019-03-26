@@ -28,6 +28,11 @@ DEFAULT_KEY_PATH = os.path.join(CERT_DIR, 'DEFAULT.key')
 HTTP2BIN_CERT_PATH = os.path.join(CERT_DIR, 'http2bin.org.pem')
 HTTP2BIN_KEY_PATH = os.path.join(CERT_DIR, 'http2bin.org.key')
 
+# acme style (not concatenated)
+CERTDIR_DIR = os.path.join(CERT_DIR, 'certs')
+os.mkdir(CERTDIR_DIR)
+ALPN_CERT_DIR = os.path.join(CERT_DIR, 'alpn-certs')
+os.mkdir(ALPN_CERT_DIR)
 
 # A list of tuples that controls what certs get built and signed by the root.
 # Each tuple is (hostname, cert_path)
@@ -151,18 +156,45 @@ def _build_single_leaf(hostname, certfile, ca_cert, ca_key):
         backend=default_backend()
     )
 
+    private_bytes = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption()
+    )
+
+    public_bytes = certificate.public_bytes(serialization.Encoding.PEM)
+
     # Write it out.
     with open(certfile, 'wb') as f:
-        f.write(
-            private_key.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.TraditionalOpenSSL,
-                encryption_algorithm=serialization.NoEncryption()
-            )
-        )
-        f.write(
-            certificate.public_bytes(serialization.Encoding.PEM)
-        )
+        f.write(private_bytes)
+        f.write(public_bytes)
+
+    # styles understood by txsni.certmaps:
+    hostname_key = hostname
+    if hostname_key == 'localhost':
+        hostname_key = 'DEFAULT'
+
+    hostname_dir = os.path.join(CERTDIR_DIR, hostname_key)
+    key_file = os.path.join(hostname_dir, 'privkey.pem')
+    chain_file = os.path.join(hostname_dir, 'fullchain.pem')
+
+    if not os.path.exists(hostname_dir):
+        os.makedirs(hostname_dir)
+
+    with open(key_file, 'wb') as f:
+        f.write(private_bytes)
+
+    with open(chain_file, 'wb') as f:
+        f.write(public_bytes)
+
+    key_pem_file = os.path.join(ALPN_CERT_DIR, hostname_key + '.key.pem')
+    crt_pem_file = os.path.join(ALPN_CERT_DIR, hostname_key + '.crt.pem')
+
+    with open(key_pem_file, 'wb') as f:
+        f.write(private_bytes)
+
+    with open(crt_pem_file, 'wb') as f:
+        f.write(public_bytes)
 
     _LOGGER.info("Built certificate for {hostname}", hostname=hostname)
 
