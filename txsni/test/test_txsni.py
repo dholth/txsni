@@ -156,7 +156,7 @@ class TestSNIMap(unittest.TestCase):
         present.
         """
         options = CertificateOptions()
-        mapping = {'DEFAULT': options}
+        mapping = {b'DEFAULT': options}
         sni_map = SNIMap(mapping)
 
         conn = sni_map.serverConnectionForTLS(protocol.Protocol())
