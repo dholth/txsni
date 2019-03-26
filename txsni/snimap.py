@@ -51,22 +51,11 @@ class _NegotiationData(object):
 
 def _detect_acme(buf):
     """
-    Determine whether buf is probably acme-tls/1
+    Determine whether buf is probably acme-tls/1. buf should be the
+    first data received from the connection, a TLS ClientHello.
 
-    Example ClientHello from letsencrypt
-
-    b'\x16\x03\x01\x00\xe9\x01\x00\x00\xe5\x03\x03r\xfaO\xbb\xd5\xbf\x9fh'\
-    b'\x04\xc8\x90/\xbb\xa7\x01\xb6\x06\x9f\xf0\xd2\xc9\x7f\xb5\xc9Ox'\
-    b'\x1a\xba\xbf\x9e}} C\x7fz\xd4\x11B\xfeG\x05:\xbeP\xb5\xf7\x1d\x8a'\
-    b'\xc8b\xb8\xe2\xf0\xbc\xe1\x0e;F\x98\x8a\x04G\xcf\xd2\x00 \xc0/'\
-    b'\xc00\xc0+\xc0,\xcc\xa8\xcc\xa9\xc0\x13\xc0\t\xc0\x14\xc0\n\x00'\
-    b'\x9c\x00\x9d\x00/\x005\xc0\x12\x00\n\x01\x00\x00|3t\x00\x00\x00'\
-    b'\x00\x00\x16\x00\x14\x00\x00\x11dingoskidneys.com\x00\x05\x00\x05'\
-    b'\x01\x00\x00\x00\x00\x00\n\x00\n\x00\x08\x00\x1d\x00\x17\x00\x18'\
-    b'\x00\x19\x00\x0b\x00\x02\x01\x00\x00\r\x00\x18\x00\x16\x08\x04\x08'\
-    b'\x05\x08\x06\x04\x01\x04\x03\x05\x01\x05\x03\x06\x01\x06\x03\x02'\
-    b'\x01\x02\x03\xff\x01\x00\x01\x00\x00\x10\x00\r\x00\x0b\nacme-tls/1\x00'\
-    b'\x12\x00\x00\x00+\x00\x07\x06\x03\x03\x03\x02\x03\x01'
+    It would be more correct to parse the alpn list from ClientHello.
+    We assume b'acme-tls/1' is unlikely to appear in a non-acme hello.
     """
     return ACME_TLS_1 in buf
 
@@ -174,12 +163,20 @@ class SNIMap(object):
         """
         Trap alpn negotation.
 
-        Acme works by sending a special certificate based on this negotiation.
-        If such a certificate exists in self.acme_mapping, we will respond.
+        Acme works by sending a special certificate based on alpn negotiation.
+        If such a certificate exists in self.acme_mapping, we will send it.
 
         OpenSSL design flaws prevent us from changing certificates here.
         Instead we detect acme earlier and send the certificate in
         selectContext()
+
+        Acme would like to be able to know alpn and sni before setting the
+        certificate, but OpenSSL has already gotten too far along by the time
+        this callback is invoked.
+
+        See also
+        https://github.com/pyca/pyopenssl/issues/769
+        https://github.com/openssl/openssl/issues/7660#issuecomment-462104869
         """
         if (not ACME_TLS_1 in protocols
             or not self.acme_mapping

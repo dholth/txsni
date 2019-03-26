@@ -32,21 +32,22 @@ class SNIDirectoryParser(object):
 
 @implementer(IStreamServerEndpointStringParser,
              IPlugin)
-class DehydratedParser(object):
+class AcmeSNIParser(object):
     """
-    Expects a ${BASEDIR} with certs/ and alpn-certs/ subdirectories
+    Expects a ${BASEDIR} with certs/ and alpn-certs/ subdirectories.
+    The second directory is used for acme-tls certificates.
     """
-    prefix = 'dehydrated'
+    prefix = 'acmesni'
 
     def parseStreamServer(self, reactor, pemdir, *args, **kw):
-        from txsni.dehydrated import DehydratedMap, DehydratedAcmeMap
+        from txsni.certmaps import PerHostnameDirectoryMap, PerHostnameFilesMap
 
         def colonJoin(items):
             return ':'.join([item.replace(':', '\\:') for item in items])
         sub = colonJoin(list(args) + ['='.join(item) for item in kw.items()])
         subEndpoint = serverFromString(reactor, sub)
-        mapping = DehydratedMap(FilePath(expanduser(pemdir)).child('certs'))
-        acme_mapping = DehydratedAcmeMap(FilePath(expanduser(pemdir)).child('alpn-certs'))
+        mapping = PerHostnameDirectoryMap(FilePath(expanduser(pemdir)).child('certs'))
+        acme_mapping = PerHostnameFilesMap(FilePath(expanduser(pemdir)).child('alpn-certs'))
         contextFactory = SNIMap(mapping, acme_mapping)
         return TLSEndpoint(endpoint=subEndpoint,
                            contextFactory=contextFactory)

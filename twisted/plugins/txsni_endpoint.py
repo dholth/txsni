@@ -1,5 +1,5 @@
 
-from txsni.parser import SNIDirectoryParser, DehydratedParser
+from txsni.parser import SNIDirectoryParser, AcmeSNIParser
 
 dirParser = SNIDirectoryParser()
-dehydratedParser = DehydratedParser()
+acmeParser = AcmeSNIParser()

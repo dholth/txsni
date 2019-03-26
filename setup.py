@@ -21,9 +21,6 @@ setup(
         "Twisted[tls]>=14.0",
         "pyOpenSSL>=0.14",
     ],
-    extras_require = {
-        "dehydrated": ["pem"]
-    },
     version="0.1.9",
     long_description=long_description,
     license="MIT",
