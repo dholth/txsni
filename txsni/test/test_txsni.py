@@ -5,7 +5,7 @@ from functools import partial
 from txsni.snimap import SNIMap, HostDirectoryMap, ACME_TLS_1
 from txsni.tlsendpoint import TLSEndpoint
 from txsni.only_noticed_pypi_pem_after_i_wrote_this import objectsFromPEM
-from txsni.parser import SNIDirectoryParser
+from txsni.parser import SNIDirectoryParser, AcmeSNIParser
 from txsni.certmaps import PerHostnameDirectoryMap, PerHostnameFilesMap
 
 from OpenSSL.crypto import load_certificate, FILETYPE_PEM
@@ -420,6 +420,9 @@ class TestACME(unittest.TestCase):
     Tests that TxSNI can send a different cert when negotiating ACME.
     """
 
+    def setUp(self):
+        self.directory_parser = AcmeSNIParser()
+
     EXPECTED_PROTOCOL = ACME_TLS_1
 
     def assert_acme_cert_sought(self, perform_handshake):
@@ -450,8 +453,10 @@ class TestACME(unittest.TestCase):
                 self.requested.add(key)
                 return self.other[key]
 
-        endpoint = sni_endpoint()
-        acme_mapping = TrapAcme(endpoint.contextFactory.mapping)
+        endpoint = self.directory_parser.parseStreamServer(
+                reactor, CERT_DIR, 'tcp', port='0', interface='127.0.0.1')
+
+        acme_mapping = TrapAcme(endpoint.contextFactory.acme_mapping)
         endpoint.contextFactory.acme_mapping = acme_mapping
 
         d = perform_handshake(
