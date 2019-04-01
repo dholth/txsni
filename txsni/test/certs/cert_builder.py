@@ -34,6 +34,8 @@ os.mkdir(CERTDIR_DIR)
 ALPN_CERT_DIR = os.path.join(CERT_DIR, 'alpn-certs')
 os.mkdir(ALPN_CERT_DIR)
 
+NO_PRIVATE_KEY_CERT_PATH=os.path.join(ALPN_CERT_DIR, 'DEFAULT.crt.pem')
+
 # A list of tuples that controls what certs get built and signed by the root.
 # Each tuple is (hostname, cert_path)
 # We'll probably never need the easy extensibility this provides, but hey, nvm!

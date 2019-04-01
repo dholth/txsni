@@ -4,7 +4,7 @@ from functools import partial
 
 from txsni.snimap import SNIMap, HostDirectoryMap, ACME_TLS_1
 from txsni.tlsendpoint import TLSEndpoint
-from txsni.only_noticed_pypi_pem_after_i_wrote_this import objectsFromPEM
+from txsni.only_noticed_pypi_pem_after_i_wrote_this import objectsFromPEM, certificateOptionsFromPileOfPEM
 from txsni.parser import SNIDirectoryParser, AcmeSNIParser
 from txsni.certmaps import PerHostnameDirectoryMap, PerHostnameFilesMap
 
@@ -21,7 +21,7 @@ from twisted.trial import unittest
 from zope.interface import implementer
 
 from .certs.cert_builder import (
-    ROOT_CERT_PATH, HTTP2BIN_CERT_PATH, CERT_DIR, _build_certs,
+    ROOT_CERT_PATH, HTTP2BIN_CERT_PATH, NO_PRIVATE_KEY_CERT_PATH, CERT_DIR, _build_certs,
 )
 
 # We need some temporary certs.
@@ -489,3 +489,15 @@ class TestACME(unittest.TestCase):
         return self.assert_acme_cert_sought(
             partial(handshake, acceptable_protocols=[ACME_TLS_1])
         )
+
+
+class TestPileOfPem(unittest.TestCase):
+    """
+    Improve test coverage for certificateOptionsFromPileOfPEM
+    """
+    def test_expects_more_than_zero_keys(self):
+        self.assertRaises(ValueError, lambda: certificateOptionsFromPileOfPEM(b''))
+
+    def test_expects_private_key(self):
+        data = FilePath(NO_PRIVATE_KEY_CERT_PATH).getContent()
+        self.assertRaises(ValueError, lambda: certificateOptionsFromPileOfPEM(data))
