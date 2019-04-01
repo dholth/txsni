@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 from functools import partial
 
-from txsni.snimap import SNIMap, HostDirectoryMap
+from txsni.snimap import SNIMap, HostDirectoryMap, ACME_TLS_1
 from txsni.tlsendpoint import TLSEndpoint
 from txsni.only_noticed_pypi_pem_after_i_wrote_this import objectsFromPEM
 from txsni.parser import SNIDirectoryParser
@@ -146,6 +146,17 @@ class WritingNegotiatingFactory(WritingProtocolFactory,
                                 NegotiatingFactory):
     pass
 
+@implementer(interfaces.IProtocolNegotiationFactory)
+class ACMENegotiatingFactory(protocol.Factory):
+    """
+    A Twisted Protocol Factory that wants ACME_TLS_1
+    """
+    def acceptableProtocols(self):
+        return [ACME_TLS_1]
+
+class WritingACMENegotiatingFactory(WritingProtocolFactory,
+                                    ACMENegotiatingFactory):
+    pass
 
 class TestSNIMap(unittest.TestCase):
     """
@@ -381,7 +392,7 @@ class TestSNIDirectoryParser(unittest.TestCase):
 
 class TestCertMaps(unittest.TestCase):
     """
-    Test alternate certificate maps.
+    Test alternate certificate map implementations.
     """
 
     def excercise_map(self, cert_map):
@@ -402,3 +413,74 @@ class TestCertMaps(unittest.TestCase):
         ]
         for m in maps:
             self.excercise_map(m)
+
+
+class TestACME(unittest.TestCase):
+    """
+    Tests that TxSNI can send a different cert when negotiating ACME.
+    """
+
+    EXPECTED_PROTOCOL = ACME_TLS_1
+
+    def assert_acme_cert_sought(self, perform_handshake):
+        """
+        When remote prefers acme, txsni looks in the second certmap.
+        """
+        handshake_deferred = defer.Deferred()
+
+        client_factory = WritingACMENegotiatingFactory(handshake_deferred)
+
+        # In a real ACME negotiation, we would serve the certificate even
+        # though the server protocol did not prefer acme. Once the special
+        # certificate is sent the connection would be closed without any
+        # communication.
+        server_factory = ACMENegotiatingFactory.forProtocol(
+            WriteBackProtocol
+        )
+
+        class TrapAcme(dict):
+            """
+            Keep track of keys requested to see if acme_mapping was really used.
+            """
+            def __init__(self, other):
+                self.other = other
+                self.requested = set()
+
+            def __getitem__(self, key):
+                self.requested.add(key)
+                return self.other[key]
+
+        endpoint = sni_endpoint()
+        acme_mapping = TrapAcme(endpoint.contextFactory.mapping)
+        endpoint.contextFactory.acme_mapping = acme_mapping
+
+        d = perform_handshake(
+            client_factory=client_factory,
+            server_factory=server_factory,
+            hostname=u'http2bin.org',
+            server_endpoint=endpoint,
+        )
+
+        def confirm_cert(args):
+            cert, proto = args
+            self.assertEqual(list(acme_mapping.requested), [b'http2bin.org'])
+            self.assertEqual(proto, ACME_TLS_1)
+            return d
+
+        def close(args):
+            client, port = args
+            port.stopListening()
+
+        handshake_deferred.addCallback(confirm_cert)
+        handshake_deferred.addCallback(close)
+        return handshake_deferred
+
+
+    def test_acme_mapping_consulted(self):
+        """
+        When TxSNI gets a request with ACME_TLS_1 as the alpn protocol, it
+        should look in the acme_mapping.
+        """
+        return self.assert_acme_cert_sought(
+            partial(handshake, acceptable_protocols=[ACME_TLS_1])
+        )

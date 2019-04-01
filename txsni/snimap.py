@@ -157,7 +157,6 @@ class SNIMap(object):
         self.context.set_tlsext_servername_callback(
             self.selectContext
         )
-        self.counter = 0
 
     def selectAlpn(self, default, connection, protocols):
         """
@@ -178,8 +177,9 @@ class SNIMap(object):
         https://github.com/pyca/pyopenssl/issues/769
         https://github.com/openssl/openssl/issues/7660#issuecomment-462104869
         """
+
         if (not ACME_TLS_1 in protocols
-            or not self.acme_mapping
+            or self.acme_mapping is None
             or not connection._acme_tls_1):
             return default()
 
@@ -187,7 +187,7 @@ class SNIMap(object):
 
     def selectContext(self, connection):
         mapping = self.mapping
-        if connection._acme_tls_1 and self.acme_mapping:
+        if connection._acme_tls_1 and self.acme_mapping is not None:
             mapping = self.acme_mapping
 
         oldContext = connection.get_context()
