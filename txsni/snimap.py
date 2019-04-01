@@ -239,5 +239,5 @@ class HostDirectoryMap(object):
             return certificateOptionsFromPileOfPEM(filePath.getContent())
         else:
             if isinstance(hostname, bytes):
-                hostname = hostname.decode('latin1')
+                hostname = hostname.decode('charmap')
             raise KeyError("no pem file for " + hostname)
