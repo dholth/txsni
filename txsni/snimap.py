@@ -1,5 +1,4 @@
 import collections
-import ssl
 
 from zope.interface import implementer
 

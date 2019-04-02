@@ -24,8 +24,7 @@ class SNIDirectoryParser(object):
         sub = colonJoin(list(args) + ['='.join(item) for item in kw.items()])
         subEndpoint = serverFromString(reactor, sub)
         mapping = HostDirectoryMap(FilePath(expanduser(pemdir)))
-        acme_mapping = HostDirectoryMap(FilePath(expanduser(pemdir + '/acme')))
-        contextFactory = SNIMap(mapping, acme_mapping)
+        contextFactory = SNIMap(mapping)
         return TLSEndpoint(endpoint=subEndpoint,
                            contextFactory=contextFactory)
 
