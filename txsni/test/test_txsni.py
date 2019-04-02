@@ -2,6 +2,8 @@ from __future__ import absolute_import
 
 from functools import partial
 
+from ssl import OPENSSL_VERSION_INFO
+
 from txsni.snimap import SNIMap, HostDirectoryMap, ACME_TLS_1
 from txsni.tlsendpoint import TLSEndpoint
 from txsni.only_noticed_pypi_pem_after_i_wrote_this import objectsFromPEM, certificateOptionsFromPileOfPEM
@@ -488,6 +490,11 @@ class TestACME(unittest.TestCase):
         """
         return self.assert_acme_cert_sought(
             partial(handshake, acceptable_protocols=[ACME_TLS_1])
+        )
+
+    if OPENSSL_VERSION_INFO < (1,0,2):
+        test_acme_mapping_consulted.skip = (
+            "OpenSSL < 1.0.2 does not support ALPN"
         )
 
 

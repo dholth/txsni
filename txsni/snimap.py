@@ -1,8 +1,6 @@
 import collections
 import ssl
 
-from functools import wraps
-
 from zope.interface import implementer
 
 from OpenSSL.SSL import Connection
