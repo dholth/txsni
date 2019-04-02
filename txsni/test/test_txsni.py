@@ -2,8 +2,6 @@ from __future__ import absolute_import
 
 from functools import partial
 
-from ssl import OPENSSL_VERSION_INFO
-
 from txsni.snimap import SNIMap, HostDirectoryMap, ACME_TLS_1
 from txsni.tlsendpoint import TLSEndpoint
 from txsni.only_noticed_pypi_pem_after_i_wrote_this import objectsFromPEM, certificateOptionsFromPileOfPEM
@@ -15,7 +13,7 @@ from OpenSSL.SSL import Context, SSLv23_METHOD, Connection
 
 from twisted.internet import protocol, endpoints, reactor, defer, interfaces
 from twisted.internet.ssl import (
-    CertificateOptions, optionsForClientTLS, Certificate
+    CertificateOptions, optionsForClientTLS, Certificate, protocolNegotiationMechanisms
 )
 from twisted.python.filepath import FilePath
 from twisted.trial import unittest
@@ -417,6 +415,10 @@ class TestCertMaps(unittest.TestCase):
             self.excercise_map(m)
 
 
+def will_use_alpn():
+    return 'ALPN' in protocolNegotiationMechanisms().names
+
+
 class TestACME(unittest.TestCase):
     """
     Tests that TxSNI can send a different cert when negotiating ACME.
@@ -492,9 +494,9 @@ class TestACME(unittest.TestCase):
             partial(handshake, acceptable_protocols=[ACME_TLS_1])
         )
 
-    if OPENSSL_VERSION_INFO < (1,0,2):
+    if not will_use_alpn():
         test_acme_mapping_consulted.skip = (
-            "OpenSSL < 1.0.2 does not support ALPN"
+            "ALPN not supported."
         )
 
 
